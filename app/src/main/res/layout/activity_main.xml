@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <com.josfzr.plotcontest.plotter.PlotView
+        android:id="@+id/plot_view"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="320dp" />
+
+
+    <com.josfzr.plotcontest.plotter.MiniPlotViewContainer
+        android:id="@+id/mini_plot_container"
+        android:layout_marginTop="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="80dp">
+
+        <com.josfzr.plotcontest.plotter.PlotView
+            android:id="@+id/plot_view_mini"
+            app:showAll="true"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </com.josfzr.plotcontest.plotter.MiniPlotViewContainer>
+
+</LinearLayout>
