@@ -55,6 +55,7 @@ public class PlottingEngine {
     private List<Line> mLines;
 
     private long mCurrentMax, mCurrentMin;
+    private int[] mPointsStartEndIndices = new int[2];
 
     private MinMaxChangesListener mMinMaxChangeListener;
 
@@ -138,7 +139,7 @@ public class PlottingEngine {
                     LinePoint lp = new LinePoint();
                     lp.plotData = dataPoint;
                     lp.x = (int) (i * offsetX);
-                    lp.y = (int) (mPlottingViewPortSize.y - (dataPoint.value.longValue() * getValueToPixelY()));
+                    lp.y = (int) (dataPoint.value.longValue());
                     line.points.add(lp);
                 }
 
@@ -156,12 +157,20 @@ public class PlottingEngine {
         if (invalidate) requestDraw();
     }
 
-    public long getMax() {
+    public long getRealMax() {
         return mDataSet == null ? 0 : mDataSet.getMax();
     }
 
-    public long getMin() {
+    public long getRealMin() {
         return mDataSet == null ? 0 : mDataSet.getMin();
+    }
+
+    public long getCurrentMax() {
+        return mCurrentMax;
+    }
+
+    public long getCurrentMin() {
+        return mCurrentMin;
     }
 
     double getNiceMax() {
@@ -169,7 +178,11 @@ public class PlottingEngine {
     }
 
     private float getValueToPixelY() {
-        return (float) mPlottingViewPortSize.y / (float) getMax();
+        return (float) mPlottingViewPortSize.y / (float) getCurrentMax();
+    }
+
+    private float getMaxValueToPixelY() {
+        return (float) mPlottingViewPortSize.y / (float) getRealMax();
     }
 
     private float getValueToPixelX() {
@@ -181,7 +194,7 @@ public class PlottingEngine {
     }
 
     private float getPixelYToValue() {
-        return (float) getMax() / (float) mPlottingViewPortSize.y;
+        return (float) getCurrentMax() / (float) mPlottingViewPortSize.y;
     }
 
     public void onDraw(Canvas canvas) {
@@ -189,25 +202,26 @@ public class PlottingEngine {
 
         canvas.save();
         canvas.concat(mPlotMatrix);
-        int width = mDataSet.getWidth();
 
-        for (int i = 0; i < width; i++) {
+        getIndicesInRect(mViewPort, mPointsStartEndIndices);
+
+        for (int i = mPointsStartEndIndices[0]; i < mPointsStartEndIndices[1]; i++) {
             for (Line line : mLines) {
                 LinePoint point = line.points.get(i);
                 Path p = mPaths.get(line.id);
 
-                if (i == 0) {
+                if (i == mPointsStartEndIndices[0]) {
                     p.reset();
-                    p.moveTo(point.x * mScaleX, point.y);
+                    p.moveTo(point.x * mScaleX, mPlottingViewPortSize.y - (point.y * getValueToPixelY()));
                 } else {
-                    p.lineTo(point.x * mScaleX, point.y);
+                    p.lineTo(point.x * mScaleX, mPlottingViewPortSize.y - (point.y * getValueToPixelY()));
+                }
+
+                if (i == mPointsStartEndIndices[1] - 1) {
+                    mPlotPaint.setColor(line.color);
+                    canvas.drawPath(p, mPlotPaint);
                 }
             }
-        }
-
-        for (Line line : mLines) {
-            mPlotPaint.setColor(line.color);
-            canvas.drawPath(mPaths.get(line.id), mPlotPaint);
         }
 
         canvas.restore();
@@ -285,6 +299,17 @@ public class PlottingEngine {
         out[MAX] = max;
     }
 
+    private void getIndicesInRect(RectF rect, int[] indices) {
+        int startIndex = (int) Math.floor(rect.left * getPixelXToValue() * mInvScaleX);
+        int endIndex = (int) Math.ceil(rect.right * getPixelXToValue() * mInvScaleX);
+
+        startIndex = Math.min(Math.max(0, startIndex), startIndex);
+        endIndex = Math.min(endIndex, mDataSet.getWidth());
+
+        indices[0] = startIndex;
+        indices[1] = endIndex;
+    }
+
     private boolean isNewMinMax(long[] maxMin) {
         return maxMin[MIN] != mCurrentMin || maxMin[MAX] != mCurrentMax;
     }
@@ -292,6 +317,8 @@ public class PlottingEngine {
     private void setNewMinMax(long[] maxMin) {
         mCurrentMin = maxMin[MIN];
         mCurrentMax = maxMin[MAX];
+        mNiceNum.setMinMaxPoints(mCurrentMin, mCurrentMax);
+        setScaleY(getMaxValueToPixelY() / getValueToPixelY());
     }
 
     public void stopPan() {
