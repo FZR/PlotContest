@@ -1,5 +1,7 @@
 package com.josfzr.plotcontest.plotter;
 
+import android.animation.TimeAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
@@ -8,6 +10,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
 import android.graphics.RectF;
+import android.util.Log;
 
 import com.josfzr.plotcontest.R;
 import com.josfzr.plotcontest.data.Column;
@@ -55,7 +58,10 @@ public class PlottingEngine {
     private List<Line> mLines;
 
     private long mCurrentMax, mCurrentMin;
+    private long mTargetMax;
     private int[] mPointsStartEndIndices = new int[2];
+
+    private TimeAnimator mTimeAnimator;
 
     private MinMaxChangesListener mMinMaxChangeListener;
 
@@ -151,10 +157,10 @@ public class PlottingEngine {
         getMinMaxInRect(mViewPort, minMax);
 
         if (isNewMinMax(minMax)) {
-            setNewMinMax(minMax);
+            setNewMinMax(minMax, false);
         }
 
-        if (invalidate) requestDraw();
+        //if (invalidate) requestDraw();
     }
 
     public long getRealMax() {
@@ -245,7 +251,7 @@ public class PlottingEngine {
         getMinMaxInRect(mViewPort, minMax);
 
         if (isNewMinMax(minMax)) {
-            setNewMinMax(minMax);
+            setNewMinMax(minMax, true);
             if (mMinMaxChangeListener != null) {
                 mMinMaxChangeListener.onMinMaxChanged(minMax);
             }
@@ -310,19 +316,62 @@ public class PlottingEngine {
         indices[1] = endIndex;
     }
 
-    private boolean isNewMinMax(long[] maxMin) {
-        return maxMin[MIN] != mCurrentMin || maxMin[MAX] != mCurrentMax;
+    boolean endAnimation;
+    private void animateCurrentMax(long newMax) {
+        //TODO: Work on target max instead. Create separate animation delegate
+        //TODO: Put grid rendering into PlottingEngine
+        mTargetMax = newMax;
+        if (mTimeAnimator == null) {
+            mTimeAnimator = new TimeAnimator();
+            mTimeAnimator.setTimeListener((animation, totalTime, deltaTime) -> {
+                if (mCurrentMax != mTargetMax) {
+                    long value = mTargetMax - mCurrentMax;
+                    long toAdd = (long) (value * (deltaTime * .01f));
+                    if (toAdd == 0 && deltaTime != 0) {
+                        mCurrentMax = mTargetMax;
+                    } else {
+                        mCurrentMax += toAdd;
+                    }
+                    //Log.d("ENGINE", "mTargetMax " + mTargetMax);
+                    //Log.d("ENGINE", "mCurrentMax " + mCurrentMax);
+                    requestDraw();
+                } else {
+                    if (endAnimation) {
+                        mTimeAnimator.cancel();
+                    }
+                }
+
+
+
+            });
+            mTimeAnimator.start();
+        } else {
+            if (!mTimeAnimator.isRunning()) {
+                mTimeAnimator.start();
+            }
+        }
     }
 
-    private void setNewMinMax(long[] maxMin) {
-        mCurrentMin = maxMin[MIN];
-        mCurrentMax = maxMin[MAX];
-        mNiceNum.setMinMaxPoints(mCurrentMin, mCurrentMax);
-        setScaleY(getMaxValueToPixelY() / getValueToPixelY());
+    private boolean isNewMinMax(long[] maxMin) {
+        return maxMin[MIN] != mCurrentMin || maxMin[MAX] != mTargetMax;
+    }
+
+    private void setNewMinMax(long[] maxMin, boolean animate) {
+        long min = maxMin[MIN];
+        long max = maxMin[MAX];
+        mNiceNum.setMinMaxPoints(min, max);
+        if (!animate) {
+            mCurrentMin = min;
+            mCurrentMax = max;
+            mTargetMax = max;
+        } else {
+            mCurrentMin = min;
+            animateCurrentMax(max);
+        }
     }
 
     public void stopPan() {
-
+        endAnimation = true;
     }
 
     public interface Drawer {

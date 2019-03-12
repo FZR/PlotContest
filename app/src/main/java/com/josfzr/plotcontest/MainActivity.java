@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
             /*List<DataSet_Old> dataSets = new ArrayList<>();
             dataSets.add(TestDataProvider.provideTestData());
             dataSets.add(TestDataProvider.provideTestData());*/
-            DataSet dataSet = TestDataProvider.provideDataSet(getAssets(), 4);
+            DataSet dataSet = TestDataProvider.provideDataSet(getAssets(), 1);
             //dataSets.add(TestDataProvider.provideTestData());
             //dataSets.add(TestDataProvider.provideTestData());
             plotView.setDataSet(dataSet);
