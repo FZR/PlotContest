@@ -287,7 +287,7 @@ public class PlottingEngine {
         int linesCount = mLines.size();
 
         int startIndex = (int) Math.floor(rect.left * getPixelXToValue() * mInvScaleX);
-        int endIndex = (int) Math.ceil(rect.right * getPixelXToValue() * mInvScaleX);
+        int endIndex = (int) Math.ceil(rect.right * getPixelXToValue() * mInvScaleX) + 1;
 
         endIndex = Math.min(endIndex, mDataSet.getWidth());
 
@@ -307,7 +307,7 @@ public class PlottingEngine {
 
     private void getIndicesInRect(RectF rect, int[] indices) {
         int startIndex = (int) Math.floor(rect.left * getPixelXToValue() * mInvScaleX);
-        int endIndex = (int) Math.ceil(rect.right * getPixelXToValue() * mInvScaleX);
+        int endIndex = (int) Math.ceil(rect.right * getPixelXToValue() * mInvScaleX) + 1;
 
         startIndex = Math.min(Math.max(0, startIndex), startIndex);
         endIndex = Math.min(endIndex, mDataSet.getWidth());
