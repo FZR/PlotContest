@@ -1,6 +1,7 @@
 package com.josfzr.plotcontest;
 
 import android.os.Bundle;
+import android.view.View;
 
 import com.josfzr.plotcontest.data.DataSet;
 import com.josfzr.plotcontest.plotter.MiniPlotViewContainer;
@@ -19,6 +20,10 @@ public class MainActivity extends AppCompatActivity {
         PlotView plotView = findViewById(R.id.plot_view);
         MiniPlotViewContainer container = findViewById(R.id.mini_plot_container);
         container.setPanListener(plotView);
+        View b = findViewById(R.id.minus);
+        b.setOnClickListener(v -> plotView.setPlotScaleX(plotView.getPlotScaleX() - 1));
+        b = findViewById(R.id.plus);
+        b.setOnClickListener(v -> plotView.setPlotScaleX(plotView.getPlotScaleX() + 1));
         plotView.post(() -> {
             /*List<DataSet_Old> dataSets = new ArrayList<>();
             dataSets.add(TestDataProvider.provideTestData());

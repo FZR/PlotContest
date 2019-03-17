@@ -1,8 +1,8 @@
 package com.josfzr.plotcontest.data;
 
 public class PlotData {
-    volatile private int x;
-    volatile private int y;
+    private int x;
+    private int y;
     public final Number value;
 
     public PlotData(Number value) {

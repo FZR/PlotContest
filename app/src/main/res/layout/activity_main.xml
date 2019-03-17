@@ -11,6 +11,10 @@
         android:id="@+id/plot_view"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        android:paddingTop="55dp"
+        app:strokeWidth="2.2dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:layout_width="match_parent"
         android:layout_height="320dp" />
 
@@ -24,9 +28,31 @@
         <com.josfzr.plotcontest.plotter.PlotView
             android:id="@+id/plot_view_mini"
             app:showAll="true"
+            app:strokeWidth="1.6dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
     </com.josfzr.plotcontest.plotter.MiniPlotViewContainer>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/plus"
+            android:text="+"
+            android:layout_width="45dp"
+            android:layout_height="45dp" />
+
+        <Button
+            android:id="@+id/minus"
+            android:text="-"
+            android:layout_width="45dp"
+            android:layout_height="45dp" />
+
+    </LinearLayout>
+
+
 
 </LinearLayout>

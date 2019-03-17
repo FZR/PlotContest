@@ -3,6 +3,7 @@
     <dimen name="segmentation_line_height">1dp</dimen>
     <dimen name="plot_bottom_margin">16dp</dimen>
     <dimen name="plot_text_bottom_margin">8dp</dimen>
-    <dimen name="plot_text_size">14sp</dimen>
+    <dimen name="plot_text_size">12sp</dimen>
     <dimen name="plot_stroke_width">3dp</dimen>
+    <dimen name="plot_over_scroll">25dp</dimen>
 </resources>

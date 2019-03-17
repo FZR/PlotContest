@@ -2,5 +2,6 @@
 <resources>
     <declare-styleable name="PlotView">
         <attr name="showAll" format="boolean"/>
+        <attr name="strokeWidth" format="dimension"/>
     </declare-styleable>
 </resources>
