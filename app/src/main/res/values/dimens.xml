@@ -6,4 +6,10 @@
     <dimen name="plot_text_size">12sp</dimen>
     <dimen name="plot_stroke_width">3dp</dimen>
     <dimen name="plot_over_scroll">25dp</dimen>
+    <dimen name="knob_side_handles_width">10dp</dimen>
+    <dimen name="knob_top">1dp</dimen>
+
+    <dimen name="cursor_circle_diameter">12.3dp</dimen>
+    <dimen name="cursor_circle_stroke_width">3dp</dimen>
+    <dimen name="cursor_width">2dp</dimen>
 </resources>

@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 
 import com.josfzr.plotcontest.R;
 import com.josfzr.plotcontest.data.DataSet;
@@ -25,7 +26,7 @@ public class PlottingEngine {
     private static final int MAX = 1;
 
     private static final float MIN_SCALE_X = 1f;
-    private static final float DEFAULT_SCALE_X_START = 5f;
+    private static final float DEFAULT_SCALE_X_START = 7f;
 
     private final Drawer mDrawer;
     private boolean mShowAll;
@@ -45,6 +46,8 @@ public class PlottingEngine {
 
     private List<PlotDrawable> mDrawables;
     private LinePlotDrawable mLinePlotDrawable;
+    private CursorDrawable mCursor;
+    private XAxisDrawable mXAxis;
 
     private ScaleHandler mScaleHandler;
 
@@ -74,7 +77,16 @@ public class PlottingEngine {
                 strokeWidth,
                 mShowAll ? 0 : xAxisTextSize);
         mDrawables.add(mLinePlotDrawable);
-        if (!mShowAll) mDrawables.add(new XAxisDrawable(context, this, xAxisTextSize));
+
+        if (!mShowAll) {
+            mXAxis = new XAxisDrawable(context, this, xAxisTextSize);
+            mDrawables.add(mXAxis);
+        }
+
+        if (!mShowAll) {
+            mCursor = new CursorDrawable(context, this);
+            mDrawables.add(mCursor);
+        }
     }
 
     private void requestDraw() {
@@ -159,6 +171,38 @@ public class PlottingEngine {
         return (float) getCurrentMax() / (float) mViewRect.height();
     }
 
+    public CursorData getCursorDataAt(float x) {
+        float pointX = mViewPort.left + x;
+        int index = (int) Math.floor(pointX * getPixelXToValue() * getScaleXInv());
+
+        List<Line> lines = mLinePlotDrawable.getCurrentLines();
+        CursorData data = mCursor.getCurrentCursor();
+        if (data == null) {
+            data = new CursorData();
+        }
+        XAxis axis = mXAxis.getLine();
+        data.mXValue = axis.points.get(index).text;
+        //data.x = x;
+        CursorPoint[] cursorPoints = data.mCursorPoints;
+        if (cursorPoints == null) {
+            cursorPoints = new CursorPoint[lines.size()];
+        }
+        data.mCursorPoints = cursorPoints;
+        for (int i = 0; i < lines.size(); i++) {
+            data.x = lines.get(i).points.get(index).x;
+            CursorPoint point = cursorPoints[i];
+            if (point == null) {
+                point = new CursorPoint();
+            }
+            point.y = lines.get(i).points.get(index).y;
+            point.mColor = lines.get(i).color;
+            point.mValue = lines.get(i).points.get(index).plotData.value.longValue();
+            cursorPoints[i] = point;
+        }
+
+        return data;
+    }
+
     public void onDraw(Canvas canvas) {
         if (mDataSet == null) return;
         if (mDrawables == null || mDrawables.size() == 0) return;
@@ -168,10 +212,10 @@ public class PlottingEngine {
         }
     }
 
-    public void pan(float dx, float dy) {
-        float max = (mDataSet.getWidth() * getValueToPixelX() * getScaleX()) - (mDataSet.getWidth() * getValueToPixelX());
-        dx = Math.min(Math.max(dx * getScaleX(), 0), max);
-        mViewPort.offsetTo((int) dx, (int) dy);
+    public void pan(RectF projection/*float dx, float dy*/) {
+        float max = mViewRect.width() * getScaleX();
+        //dx = Math.min(Math.max(dx * getScaleX(), 0), max);
+        mViewPort.offsetTo((int) (projection.left * max), 0);
         requestDraw();
         long[] minMax = new long[2];
         getMinMaxInRect(mViewPort, minMax);
@@ -180,6 +224,21 @@ public class PlottingEngine {
             setNewMinMax(minMax, true);
         }
         //Log.d("Plotting Engine", "Min in rect is: " + minMax[0] + " Max in rect is: " + minMax[1]);
+    }
+
+    public void updateProjection(RectF projection) {
+        setScaleX(1 / projection.width());
+        float max = mViewRect.width() * getScaleX();
+        mViewPort.left = (int) Math.ceil(max * projection.left);
+        mViewPort.right = (int) Math.ceil(max * projection.right);
+
+        requestDraw();
+        long[] minMax = new long[2];
+        getMinMaxInRect(mViewPort, minMax);
+
+        if (isNewMinMax(minMax)) {
+            setNewMinMax(minMax, true);
+        }
     }
 
     public float getScaleX() {
@@ -237,7 +296,7 @@ public class PlottingEngine {
         long max = -1;
         long min = Long.MAX_VALUE;
 
-        int linesCount = mLinePlotDrawable.getLines().size();
+        int linesCount = mLinePlotDrawable.getCurrentLines().size();
 
         int startIndex = (int) Math.floor(rect.left * getPixelXToValue() * getScaleXInv());
         int endIndex = (int) Math.ceil(rect.right * getPixelXToValue() * getScaleXInv()) + 1;
@@ -247,7 +306,7 @@ public class PlottingEngine {
 
 
         for (int i = 0; i < linesCount; i++) {
-            Line line = mLinePlotDrawable.getLines().get(i);
+            Line line = mLinePlotDrawable.getCurrentLines().get(i);
             for (int j = startIndex; j < endIndex; j++) {
                 LinePoint point = line.points.get(j);
                 max = Math.max(max, point.plotData.value.longValue());
@@ -304,7 +363,7 @@ public class PlottingEngine {
                 }
                 if (mDrawables != null) {
                     for (PlotDrawable drawable : mDrawables) {
-                        canEnd = !drawable.animate(delta) && canEnd;
+                        canEnd = drawable.animate(delta) && canEnd;
                     }
                 }
 
@@ -337,6 +396,7 @@ public class PlottingEngine {
             mCurrentMax = max;
             mTargetMax = max;
         } else {
+            //TODO: do not react on min
             mCurrentMin = min;
             for (PlotDrawable d : mDrawables) {
                 d.onNewMinMax(minMax);
@@ -347,6 +407,12 @@ public class PlottingEngine {
 
     public void stopPan() {
         endAnimation = true;
+    }
+
+    public void setCursorAt(float x) {
+        CursorData data = getCursorDataAt(x);
+        mCursor.setCursor(data);
+        requestDraw();
     }
 
     public interface Drawer {
@@ -369,4 +435,17 @@ public class PlottingEngine {
         int x;
         int y;
     }
+
+    static class CursorPoint {
+        int mColor;
+        long mValue;
+        int y;
+    }
+
+    static class CursorData {
+        CursorPoint[] mCursorPoints;
+        String mXValue;
+        float x;
+    }
+
 }

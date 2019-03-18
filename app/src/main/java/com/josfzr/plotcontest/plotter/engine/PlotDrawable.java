@@ -10,7 +10,8 @@ public interface PlotDrawable {
 
     /**
      * @param delta - delta between frames
-     * @return {@link Boolean#TRUE} if drawable did animate. {@link Boolean#FALSE} if it didn't animate
+     * @return {@link Boolean#TRUE} if drawable finished animation or didn't animate.
+     * {@link Boolean#FALSE} if it didn't finish animating
      */
     boolean animate(float delta);
     void onNewSize(Rect viewSize);

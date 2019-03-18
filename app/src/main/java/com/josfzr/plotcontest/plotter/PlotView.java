@@ -5,24 +5,34 @@ import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 
 import com.josfzr.plotcontest.R;
 import com.josfzr.plotcontest.data.DataSet;
+import com.josfzr.plotcontest.data.PlotData;
 import com.josfzr.plotcontest.plotter.engine.PlottingEngine;
 
 import androidx.annotation.Nullable;
 
 public class PlotView extends View implements PlottingEngine.Drawer,
-        MiniPlotViewContainer.PanListener {
+        KnobListener {
 
     private Rect mPlotViewSize;
 
     private PlottingEngine mPlottingEngine;
 
     private boolean mShowAll, mIsPanning;
+
+    private PopupWindow mPopup;
 
     public PlotView(Context context) {
         this(context, null, 0);
@@ -53,6 +63,14 @@ public class PlotView extends View implements PlottingEngine.Drawer,
         }
 
         mPlottingEngine = new PlottingEngine(context, this, mShowAll, strokeWidth);
+        LayoutInflater inflater = LayoutInflater.from(context);
+        View v = inflater.inflate(R.layout.popup, null);
+        TextView tv = v.findViewById(R.id.date_text);
+        tv.setText("asdasdasd");
+        mPopup = new PopupWindow(v,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+
         setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
@@ -84,9 +102,25 @@ public class PlotView extends View implements PlottingEngine.Drawer,
     }
 
     @Override
-    public void onPanned(float dx, float dy) {
+    public boolean onTouchEvent(MotionEvent event) {
+        //PlotData[] data = mPlottingEngine.getPlotDataAt(event.getX());
+        if (event.getActionMasked() == MotionEvent.ACTION_MOVE
+                || event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            mPlottingEngine.setCursorAt(event.getX());
+            if (mPopup.isShowing()) {
+                mPopup.update(this, (int) event.getX(), -getMeasuredHeight() + 50, -2, -2);
+            } else {
+                mPopup.showAsDropDown(this, (int) event.getX(), -getMeasuredHeight() + 50);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onPanned(RectF projection/*float dx, float dy*/) {
         mIsPanning = true;
-        mPlottingEngine.pan(dx, dy);
+        mPlottingEngine.pan(projection);
     }
 
     @Override
@@ -114,5 +148,15 @@ public class PlotView extends View implements PlottingEngine.Drawer,
     @Override
     public void onDrawRequested() {
         invalidate();
+    }
+
+    @Override
+    public void onScale(float x, float y) {
+        mPlottingEngine.setScale(x, y);
+    }
+
+    @Override
+    public void updateProjection(RectF projection) {
+        mPlottingEngine.updateProjection(projection);
     }
 }

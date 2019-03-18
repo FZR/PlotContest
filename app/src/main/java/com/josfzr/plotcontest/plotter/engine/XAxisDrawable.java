@@ -31,6 +31,7 @@ class XAxisDrawable implements PlotDrawable {
     private int mOverScroll;
 
     private int[] mStartEndIndices = new int[2];
+    private XLabel[] mLabels;
 
     public XAxisDrawable(@NonNull Context context,
                          @NonNull PlottingEngine engine,
@@ -74,7 +75,7 @@ class XAxisDrawable implements PlotDrawable {
 
     @Override
     public boolean animate(float delta) {
-        return false;
+        return true;
     }
 
     @Override
@@ -120,5 +121,20 @@ class XAxisDrawable implements PlotDrawable {
         int firstPossibleNumber = divider * quotient;
         int secondPossibleNumber = (number * divider) > 0 ? (divider * (quotient + 1)) : (divider * (quotient - 1));
         return Math.abs(number - firstPossibleNumber) < Math.abs(divider - secondPossibleNumber) ? firstPossibleNumber : secondPossibleNumber;
+    }
+
+    float getTextSize() {
+        return mXAxisTextPaint.measureText(mLine.points.get(0).text);
+    }
+
+    public PlottingEngine.XAxis getLine() {
+        return mLine;
+    }
+
+    class XLabel {
+        private String mText;
+        private float mLeft, mRight;
+        private long mValue;
+        private int mAlpha = 0;
     }
 }

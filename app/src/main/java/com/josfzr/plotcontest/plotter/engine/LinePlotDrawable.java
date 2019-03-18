@@ -25,7 +25,8 @@ class LinePlotDrawable implements PlotDrawable {
     private Paint mPlotPaint;
 
     private HashMap<String, Path> mPaths;
-    private List<PlottingEngine.Line> mLines;
+    private List<PlottingEngine.Line> mAllLines;
+    private List<PlottingEngine.Line> mCurrentLines;
 
     private DataSet mDataSet;
     private int[] mStartEndIndices = new int[2];
@@ -53,7 +54,7 @@ class LinePlotDrawable implements PlotDrawable {
         canvas.translate(-mEngine.getViewport().left, 0);
 
         for (int i = mStartEndIndices[0]; i < mStartEndIndices[1]; i++) {
-            for (PlottingEngine.Line line : mLines) {
+            for (PlottingEngine.Line line : mCurrentLines) {
                 PlottingEngine.LinePoint point = line.points.get(i);
                 Path p = mPaths.get(line.id);
 
@@ -85,7 +86,7 @@ class LinePlotDrawable implements PlotDrawable {
 
     @Override
     public boolean animate(float delta) {
-        return false;
+        return true;
     }
 
     @Override
@@ -106,7 +107,7 @@ class LinePlotDrawable implements PlotDrawable {
         float offsetX = mEngine.getValueToPixelX();
 
         mPaths = new HashMap<>(mDataSet.getColumns().length - 1);
-        mLines = new ArrayList<>(mDataSet.getColumns().length - 1);
+        mAllLines = new ArrayList<>(mDataSet.getColumns().length - 1);
 
         for (Column column : mDataSet.getColumns()) {
             if (column.getType() == Column.TYPE_X) continue;
@@ -117,7 +118,7 @@ class LinePlotDrawable implements PlotDrawable {
             line.id = column.getId();
             line.color = ((LineData) column).getColor();
             line.points = points;
-            mLines.add(line);
+            mAllLines.add(line);
 
             for (int i = 0; i < dataPointsCount; i++) {
                 PlotData dataPoint = column.getValues().get(i);
@@ -128,9 +129,35 @@ class LinePlotDrawable implements PlotDrawable {
                 points.add(lp);
             }
         }
+
+        mCurrentLines = new ArrayList<>(mAllLines);
     }
 
-    List<PlottingEngine.Line> getLines() {
-        return mLines;
+    void hideLine(String id) {
+        for (int i = mCurrentLines.size() - 1; i >= 0; i--) {
+            PlottingEngine.Line l = mCurrentLines.get(i);
+            if (l.id.equals(id)) {
+                mCurrentLines.remove(i);
+                break;
+            }
+        }
+    }
+
+    void showLine(String id) {
+        for (int i = 0; i < mAllLines.size(); i++) {
+            PlottingEngine.Line l = mAllLines.get(i);
+            if (l.id.equals(id)) {
+                mCurrentLines.add(l);
+                break;
+            }
+        }
+    }
+
+    List<PlottingEngine.Line> getCurrentLines() {
+        return mCurrentLines;
+    }
+
+    List<PlottingEngine.Line> getAllLines() {
+        return mAllLines;
     }
 }

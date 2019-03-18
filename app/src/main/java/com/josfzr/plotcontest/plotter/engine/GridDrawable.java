@@ -76,7 +76,7 @@ class GridDrawable implements PlotDrawable {
             line.mAlpha = (int) Math.min(line.mAlpha + diff, 255);
         }
 
-        return mLinesForAnimation != null && mLinesForAnimation.size() > 0;
+        return mLinesForAnimation == null || mLinesForAnimation.size() == 0;
     }
 
     @Override

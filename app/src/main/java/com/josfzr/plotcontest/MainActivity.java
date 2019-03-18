@@ -4,7 +4,7 @@ import android.os.Bundle;
 import android.view.View;
 
 import com.josfzr.plotcontest.data.DataSet;
-import com.josfzr.plotcontest.plotter.MiniPlotViewContainer;
+import com.josfzr.plotcontest.plotter.MiniPlotView;
 import com.josfzr.plotcontest.plotter.PlotView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,12 +18,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         PlotView plotView = findViewById(R.id.plot_view);
-        MiniPlotViewContainer container = findViewById(R.id.mini_plot_container);
-        container.setPanListener(plotView);
-        View b = findViewById(R.id.minus);
-        b.setOnClickListener(v -> plotView.setPlotScaleX(plotView.getPlotScaleX() - 1));
+        MiniPlotView miniPlotView = findViewById(R.id.mini_plot_view);
+        //MiniPlotViewContainer container = findViewById(R.id.mini_plot_container);
+        miniPlotView.setPanListener(plotView);
+        /*View b = findViewById(R.id.minus);
+        b.setOnClickListener(v -> plotView.setPlotScaleX(plotView.getPlotScaleX() - 1.2f));
         b = findViewById(R.id.plus);
-        b.setOnClickListener(v -> plotView.setPlotScaleX(plotView.getPlotScaleX() + 1));
+        b.setOnClickListener(v -> plotView.setPlotScaleX(plotView.getPlotScaleX() + 1.2f));*/
         plotView.post(() -> {
             /*List<DataSet_Old> dataSets = new ArrayList<>();
             dataSets.add(TestDataProvider.provideTestData());
@@ -32,8 +33,7 @@ public class MainActivity extends AppCompatActivity {
             //dataSets.add(TestDataProvider.provideTestData());
             //dataSets.add(TestDataProvider.provideTestData());
             plotView.setDataSet(dataSet);
-            PlotView mini = findViewById(R.id.plot_view_mini);
-            mini.setDataSet(dataSet);
+            miniPlotView.setDataSet(dataSet);
         });
     }
 }
