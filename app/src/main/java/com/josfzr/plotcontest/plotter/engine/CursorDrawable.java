@@ -40,7 +40,8 @@ class CursorDrawable implements PlotDrawable {
         mDiameter = r.getDimension(R.dimen.cursor_circle_diameter);
         mCursorWidth = r.getDimension(R.dimen.cursor_width);
         mCircleStrokeWidth = r.getDimension(R.dimen.cursor_circle_stroke_width);
-        mBottomTextHeight = r.getDimension(R.dimen.plot_text_size);
+        mBottomTextHeight = r.getDimension(R.dimen.plot_x_axis_text_margin_top)
+                + r.getDimension(R.dimen.plot_x_axis_text_size);
     }
 
     @Override

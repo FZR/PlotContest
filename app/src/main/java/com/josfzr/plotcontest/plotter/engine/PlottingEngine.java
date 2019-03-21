@@ -25,8 +25,8 @@ public class PlottingEngine {
     private static final int MIN = 0;
     private static final int MAX = 1;
 
-    private static final float MIN_SCALE_X = 1f;
-    private static final float DEFAULT_SCALE_X_START = 7f;
+    public static final float MIN_SCALE_X = 1f;
+    public static final float MAX_SCALE_X = 4f;
 
     private final Drawer mDrawer;
     private boolean mShowAll;
@@ -66,20 +66,19 @@ public class PlottingEngine {
         mXAxisTextPaint.setColor(Color.BLACK);
 
         mScaleHandler = new ScaleHandler(
-                mShowAll ? MIN_SCALE_X : DEFAULT_SCALE_X_START, 1f
+                mShowAll ? MIN_SCALE_X : MIN_SCALE_X, 1f
         );
 
         mNiceNum = new NiceNum(0, 0);
         mDrawables = new ArrayList<>();
-        if (!mShowAll) mDrawables.add(new GridDrawable(context, this, r.getDimensionPixelSize(R.dimen.plot_text_size)));
+        if (!mShowAll) mDrawables.add(new GridDrawable(context, this));
         mLinePlotDrawable = new LinePlotDrawable(context,
                 this,
-                strokeWidth,
-                mShowAll ? 0 : xAxisTextSize);
+                strokeWidth);
         mDrawables.add(mLinePlotDrawable);
 
         if (!mShowAll) {
-            mXAxis = new XAxisDrawable(context, this, xAxisTextSize);
+            mXAxis = new XAxisDrawable(context, this);
             mDrawables.add(mXAxis);
         }
 
@@ -87,6 +86,10 @@ public class PlottingEngine {
             mCursor = new CursorDrawable(context, this);
             mDrawables.add(mCursor);
         }
+    }
+
+    boolean isShowAll() {
+        return mShowAll;
     }
 
     private void requestDraw() {
@@ -148,7 +151,7 @@ public class PlottingEngine {
     }
 
     float getDefaultScaleXStart() {
-        return DEFAULT_SCALE_X_START;
+        return MAX_SCALE_X;
     }
 
     float getValueToPixelY() {
@@ -228,7 +231,7 @@ public class PlottingEngine {
 
     public void updateProjection(RectF projection) {
         setScaleX(1 / projection.width());
-        float max = mViewRect.width() * getScaleX();
+        float max = mViewRect.right * getScaleX();
         mViewPort.left = (int) Math.ceil(max * projection.left);
         mViewPort.right = (int) Math.ceil(max * projection.right);
 
@@ -367,7 +370,7 @@ public class PlottingEngine {
                     }
                 }
 
-                if (endAnimation && canEnd) {
+                if (canEnd) {
                     lastAnimationTime = mTimeAnimator.getCurrentPlayTime();
                     mTimeAnimator.cancel();
                 } else {
@@ -415,6 +418,34 @@ public class PlottingEngine {
         requestDraw();
     }
 
+    public double getNiceMin() {
+        return mNiceNum.getNiceMin();
+    }
+
+    public void onRestoreLine(String id) {
+        if (mLinePlotDrawable != null) {
+            mLinePlotDrawable.showLine(id);
+            long[] minMax = new long[2];
+            getMinMaxInRect(mViewPort, minMax);
+
+            if (isNewMinMax(minMax)) {
+                setNewMinMax(minMax, true);
+            }
+        }
+    }
+
+    public void onRemoveLine(String id) {
+        if (mLinePlotDrawable != null) {
+            mLinePlotDrawable.hideLine(id);
+            long[] minMax = new long[2];
+            getMinMaxInRect(mViewPort, minMax);
+
+            if (isNewMinMax(minMax)) {
+                setNewMinMax(minMax, true);
+            }
+        }
+    }
+
     public interface Drawer {
         void onDrawRequested();
     }
@@ -427,6 +458,7 @@ public class PlottingEngine {
         String id;
         int color;
         List<LinePoint> points;
+        int alpha = 255;
     }
 
     static class LinePoint {

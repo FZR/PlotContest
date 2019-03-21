@@ -34,9 +34,7 @@ class GridDrawable implements PlotDrawable {
     private List<SegmentationLine> mLinesForAnimation;
 
     GridDrawable(@NonNull Context context,
-                        @NonNull PlottingEngine mEngine,
-                        int xAxisTextSize) {
-        mXAxisTextSize = xAxisTextSize;
+                        @NonNull PlottingEngine mEngine) {
 
         Resources r = context.getResources();
         this.mEngine = mEngine;
@@ -50,6 +48,9 @@ class GridDrawable implements PlotDrawable {
         int textColor = ContextCompat.getColor(context, R.color.day_plot_text_color);
         mTextPaint.setColor(textColor);
         mTextPaint.setTextSize(r.getDimension(R.dimen.plot_text_size));
+
+        mXAxisTextSize = r.getDimensionPixelSize(R.dimen.plot_x_axis_text_margin_top)
+                + r.getDimensionPixelSize(R.dimen.plot_x_axis_text_size);
     }
 
     @Override
@@ -61,7 +62,7 @@ class GridDrawable implements PlotDrawable {
 
     @Override
     public boolean animate(float delta) {
-        float diff = 255 * delta * 1.2f;
+        float diff = 255 * delta * .9f;
         for (int i = mLinesForAnimation.size() - 1; i >= 0; i--) {
             SegmentationLine line = mLinesForAnimation.get(i);
             if (line.mAlpha == 0) {

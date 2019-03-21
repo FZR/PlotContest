@@ -13,6 +13,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 
 import com.josfzr.plotcontest.R;
+import com.josfzr.plotcontest.plotter.engine.PlottingEngine;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -60,7 +61,7 @@ public class MiniPlotView extends PlotView {
 
         mKnobTop = r.getDimension(R.dimen.knob_top);
         mKnobHandleWidth = r.getDimension(R.dimen.knob_side_handles_width);
-        mProjection = new RectF(0, 0, .142f, 1f);
+        mProjection = new RectF(0, 0, 1f, 1f);
     }
 
     public void setPanListener(KnobListener knobListener) {
@@ -78,11 +79,12 @@ public class MiniPlotView extends PlotView {
         mFillCanvas = new Canvas(mFillBitmap);
         mKnobRect = new RectF(getPaddingLeft(),
                 getPaddingTop(),
-                ((w - getPaddingRight()) / 7f) + (mKnobHandleWidth * 2),
+                ((w - getPaddingRight())),
                 h - getPaddingBottom()
         );
 
-        mKnobMinSize = mKnobRect.width();
+        mKnobMinSize = mKnobRect.width() / PlottingEngine.MAX_SCALE_X;
+        //mProjection.right = (mKnobRect.right - mKnobHandleWidth) / getMeasuredWidth();
     }
 
     @Override

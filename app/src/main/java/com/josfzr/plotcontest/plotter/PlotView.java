@@ -159,4 +159,12 @@ public class PlotView extends View implements PlottingEngine.Drawer,
     public void updateProjection(RectF projection) {
         mPlottingEngine.updateProjection(projection);
     }
+
+    public void onRestoreLine(String id) {
+        mPlottingEngine.onRestoreLine(id);
+    }
+
+    public void onRemoveLine(String id) {
+        mPlottingEngine.onRemoveLine(id);
+    }
 }

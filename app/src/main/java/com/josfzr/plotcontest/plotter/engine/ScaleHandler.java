@@ -26,8 +26,8 @@ class ScaleHandler {
     }
 
     void setScaleX(float scaleX) {
-        this.mScaleX = scaleX;
-        this.mScaleXInv = 1f / scaleX;
+        this.mScaleX = scaleX;//(float) Math.pow(2, scaleX);
+        this.mScaleXInv = 1f / mScaleX;
     }
 
     void setScaleY(float scaleY) {

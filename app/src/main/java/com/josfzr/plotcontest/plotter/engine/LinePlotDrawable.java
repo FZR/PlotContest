@@ -7,12 +7,14 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
 
+import com.josfzr.plotcontest.R;
 import com.josfzr.plotcontest.data.Column;
 import com.josfzr.plotcontest.data.DataSet;
 import com.josfzr.plotcontest.data.LineData;
 import com.josfzr.plotcontest.data.PlotData;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -28,15 +30,15 @@ class LinePlotDrawable implements PlotDrawable {
     private List<PlottingEngine.Line> mAllLines;
     private List<PlottingEngine.Line> mCurrentLines;
 
+    private int[] mAlphas;
+
     private DataSet mDataSet;
     private int[] mStartEndIndices = new int[2];
 
     public LinePlotDrawable(@NonNull Context context,
                             @NonNull PlottingEngine mEngine,
-                            float strokeWidth,
-                            float xAxisTextHeight) {
+                            float strokeWidth) {
         this.mEngine = mEngine;
-        mXAxisTextHeight = xAxisTextHeight;
 
         Resources r = context.getResources();
         mPlotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -45,6 +47,9 @@ class LinePlotDrawable implements PlotDrawable {
         mPlotPaint.setStrokeJoin(Paint.Join.ROUND);
         mPlotPaint.setStrokeCap(Paint.Cap.ROUND);
         mPlotPaint.setStyle(Paint.Style.STROKE);
+
+        mXAxisTextHeight = mEngine.isShowAll() ? 0 : (r.getDimension(R.dimen.plot_x_axis_text_size)
+                + r.getDimension(R.dimen.plot_x_axis_text_margin_top));
     }
 
     @Override
@@ -53,15 +58,17 @@ class LinePlotDrawable implements PlotDrawable {
         canvas.save();
         canvas.translate(-mEngine.getViewport().left, 0);
 
-        for (int i = mStartEndIndices[0]; i < mStartEndIndices[1]; i++) {
-            for (PlottingEngine.Line line : mCurrentLines) {
+
+        for (PlottingEngine.Line line : mAllLines) {
+            if (line.alpha == 0) continue;
+            Path p = mPaths.get(line.id);
+
+            if (p == null) {
+                throw new NullPointerException("Path is NULL");
+            }
+
+            for (int i = mStartEndIndices[0]; i < mStartEndIndices[1]; i++) {
                 PlottingEngine.LinePoint point = line.points.get(i);
-                Path p = mPaths.get(line.id);
-
-                if (p == null) {
-                    throw new NullPointerException("Path is NULL");
-                }
-
                 float x = point.x * mEngine.getScaleX();
                 float y = mRectToDraw.top
                         + mRectToDraw.height()
@@ -73,12 +80,11 @@ class LinePlotDrawable implements PlotDrawable {
                 } else {
                     p.lineTo(x, y);
                 }
-
-                if (i == mStartEndIndices[1] - 1) {
-                    mPlotPaint.setColor(line.color);
-                    canvas.drawPath(p, mPlotPaint);
-                }
             }
+
+            mPlotPaint.setColor(line.color);
+            mPlotPaint.setAlpha(line.alpha);
+            canvas.drawPath(p, mPlotPaint);
         }
 
         canvas.restore();
@@ -86,7 +92,26 @@ class LinePlotDrawable implements PlotDrawable {
 
     @Override
     public boolean animate(float delta) {
-        return true;
+        //if (mCurrentLines.size() == mAllLines.size()) return true;
+
+        int linesSize = mAllLines.size();
+        boolean willFinishAnimation = true;
+
+        for (int i = 0; i < linesSize; i++) {
+            boolean isOk = mAllLines.get(i).alpha == mAlphas[i];
+            willFinishAnimation = willFinishAnimation && isOk;
+            if (isOk) continue;
+            float diff = 255 * delta * .6f;
+            int targetAlpha = mAlphas[i];
+            if (targetAlpha == 0) {
+                mAllLines.get(i).alpha = (int) Math.max((mAllLines.get(i).alpha - diff), 0);
+            } else {
+                mAllLines.get(i).alpha = (int) Math.min((mAllLines.get(i).alpha + diff), 255);
+            }
+
+        }
+
+        return willFinishAnimation;
     }
 
     @Override
@@ -131,13 +156,16 @@ class LinePlotDrawable implements PlotDrawable {
         }
 
         mCurrentLines = new ArrayList<>(mAllLines);
+        mAlphas = new int[mAllLines.size()];
+        Arrays.fill(mAlphas, 255);
     }
 
     void hideLine(String id) {
-        for (int i = mCurrentLines.size() - 1; i >= 0; i--) {
-            PlottingEngine.Line l = mCurrentLines.get(i);
+        for (int i = mAllLines.size() - 1; i >= 0; i--) {
+            PlottingEngine.Line l = mAllLines.get(i);
             if (l.id.equals(id)) {
-                mCurrentLines.remove(i);
+                mCurrentLines.remove(l);
+                mAlphas[i] = 0;
                 break;
             }
         }
@@ -147,7 +175,8 @@ class LinePlotDrawable implements PlotDrawable {
         for (int i = 0; i < mAllLines.size(); i++) {
             PlottingEngine.Line l = mAllLines.get(i);
             if (l.id.equals(id)) {
-                mCurrentLines.add(l);
+                mCurrentLines.add(Math.min(i, mCurrentLines.size()), l);
+                mAlphas[i] = 255;
                 break;
             }
         }
