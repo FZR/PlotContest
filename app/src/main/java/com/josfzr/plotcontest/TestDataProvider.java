@@ -15,14 +15,16 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import androidx.annotation.Nullable;
 
 public class TestDataProvider {
 
     @Nullable
-    public static DataSet provideDataSet(AssetManager assetManager, int whichDataSet) {
-        DataSet dataSet = null;
+    public static List<DataSet> provideDataSets(AssetManager assetManager) {
+        List<DataSet> dataSets = null;
         InputStream is = null;
         Column[] columns = null;
 
@@ -37,14 +39,15 @@ public class TestDataProvider {
 
             JSONArray array = new JSONArray(json);
 
-            if (whichDataSet < 0 || whichDataSet >= array.length()) return null;
+            int arrayLength = array.length();
+            if (arrayLength == 0) return null;
+            dataSets = new ArrayList<>();
 
-            JSONObject object = array.getJSONObject(whichDataSet);
-            columns = createColumns(object);
-
-            if (columns == null) return null;
-
-            dataSet = new DataSet(columns);
+            for (int i = 0; i < arrayLength; i++) {
+                JSONObject object = array.getJSONObject(i);
+                columns = createColumns(object);
+                dataSets.add(new DataSet(columns));
+            }
 
         } catch (Exception e) {
             Log.e("TEST_DATA_PROVIDER", "error loading data", e);
@@ -57,7 +60,8 @@ public class TestDataProvider {
                 }
             }
         }
-        return dataSet;
+
+        return dataSets;
     }
 
     private static Column[] createColumns(JSONObject object) throws JSONException {

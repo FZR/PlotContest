@@ -4,13 +4,48 @@
     <color name="colorPrimaryDark">#426382</color>
     <color name="colorAccent">#7BC9AA</color>
 
-    <color name="day_segmentation_line_color">#9996a2aa</color>
+    <color name="white">#ffffff</color>
+
+    <!-- day colors -->
+    <color name="day_primary">@color/colorPrimary</color>
+    <color name="day_primary_dark">@color/colorPrimaryDark</color>
+
+    <color name="day_global_background">#ffffff</color>
+    <color name="day_global_texts_color">#1b1b1b</color>
+
+    <color name="day_segmentation_line_color">#6696a2aa</color>
     <color name="day_plot_text_color">#96a2aa</color>
     <color name="day_selection_line_color">#e5ebef</color>
 
-    <color name="mini_plot_fill">#4dcad7db</color>
-    <color name="knob_handles_color">#b3bacbd8</color>
+    <color name="day_mini_plot_fill">#4dcad7db</color>
+    <color name="day_knob_handles_color">#b3bacbd8</color>
 
-    <color name="white">#fff</color>
-    <color name="cursor_color">#c4d2db</color>
+    <color name="day_popup_border">#f5f5f5</color>
+
+    <color name="day_cursor_inner_circle_color">#ffffff</color>
+    <color name="day_cursor_color">#c4d2db</color>
+
+    <color name="day_scroll_bg">#eeeeee</color>
+
+    <!-- night colors -->
+    <color name="night_primary">#1e2834</color>
+    <color name="night_primary_dark">#192129</color>
+
+    <color name="night_global_background">#1b232d</color>
+    <color name="night_global_texts_color">#ffffff</color>
+
+    <color name="night_segmentation_line_color">#0e1319</color>
+    <color name="night_plot_text_color">#435462</color>
+    <color name="night_selection_line_color">#19202a</color>
+
+    <color name="night_mini_plot_fill">#4d182029</color>
+    <color name="night_knob_handles_color">#b326394b</color>
+
+    <color name="night_popup_border">#1a212b</color>
+
+    <color name="night_cursor_inner_circle_color">#1a202c</color>
+    <color name="night_cursor_color">#0e1319</color>
+
+    <color name="night_scroll_bg">#151c23</color>
+
 </resources>

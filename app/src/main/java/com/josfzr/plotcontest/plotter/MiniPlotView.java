@@ -14,6 +14,7 @@ import android.view.MotionEvent;
 
 import com.josfzr.plotcontest.R;
 import com.josfzr.plotcontest.plotter.engine.PlottingEngine;
+import com.josfzr.plotcontest.themes.AppTheme;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -56,8 +57,8 @@ public class MiniPlotView extends PlotView {
         mKnobPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
 
         Resources r = context.getResources();
-        mFillColor = ContextCompat.getColor(context, R.color.mini_plot_fill);
-        mKnobHandlesColor = ContextCompat.getColor(context, R.color.knob_handles_color);
+        mFillColor = ContextCompat.getColor(context, R.color.day_mini_plot_fill);
+        mKnobHandlesColor = ContextCompat.getColor(context, R.color.day_knob_handles_color);
 
         mKnobTop = r.getDimension(R.dimen.knob_top);
         mKnobHandleWidth = r.getDimension(R.dimen.knob_side_handles_width);
@@ -140,9 +141,9 @@ public class MiniPlotView extends PlotView {
     }
 
     private int testKnobsHitOnRect(RectF rect, float hitX, float knobHandleSize) {
-        if (hitX >= rect.left && hitX <= rect.left + knobHandleSize) {
+        if (hitX >= rect.left - (knobHandleSize * 4) && hitX <= rect.left + (knobHandleSize * 4)) {
             return LEFT;
-        } else if (hitX >= rect.right - knobHandleSize && hitX <= rect.right) {
+        } else if (hitX >= rect.right - (knobHandleSize * 4)  && hitX <= (rect.right + knobHandleSize * 4)) {
             return RIGHT;
         }
 
@@ -164,6 +165,12 @@ public class MiniPlotView extends PlotView {
                 mKnobPaint);
 
         canvas.drawBitmap(mFillBitmap, 0, 0, null);
+    }
 
+    @Override
+    public void setAppTheme(AppTheme appTheme) {
+        mFillColor = ContextCompat.getColor(getContext(), appTheme.getMiniPlotFillColor());
+        mKnobHandlesColor = ContextCompat.getColor(getContext(), appTheme.getKnobHandlesColor());
+        invalidate();
     }
 }

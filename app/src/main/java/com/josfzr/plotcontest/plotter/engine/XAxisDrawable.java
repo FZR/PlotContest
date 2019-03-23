@@ -3,37 +3,33 @@ package com.josfzr.plotcontest.plotter.engine;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 
 import com.josfzr.plotcontest.R;
-import com.josfzr.plotcontest.data.Column;
-import com.josfzr.plotcontest.data.DataSet;
-import com.josfzr.plotcontest.data.PlotData;
-import com.josfzr.plotcontest.utils.DateTimeUtils;
-
-import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import com.josfzr.plotcontest.plotter.engine.data.Line;
+import com.josfzr.plotcontest.plotter.engine.data.PlotEngineDataHandler;
+import com.josfzr.plotcontest.plotter.engine.data.XAxis;
+import com.josfzr.plotcontest.themes.AppTheme;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 class XAxisDrawable implements PlotDrawable {
-    private static final float MIN_ON_SCREEN_DATE_COUNT = 3f;
-    private static final float MAX_ON_SCREEN_DATE_COUNT = 6f;
+    private static final float MAX_ON_SCREEN_DATE_COUNT = 8f;
 
     private PlottingEngine mEngine;
     private float mXAxisTextSize, mTextMargin;
-    private PlottingEngine.XAxis mLine;
+    private XAxis mLine;
     private Paint mXAxisTextPaint;
     private Rect mViewRect;
 
-    private int[] mStartEndIndices = new int[2];
     private XLabel[] mLabels;
 
-    private float mBestOnScreen = MIN_ON_SCREEN_DATE_COUNT;
+    private final int mMaxCompleteSets;
+    private int mPower;
+
+    private float mMinSpan;
 
     public XAxisDrawable(@NonNull Context context,
                          @NonNull PlottingEngine engine) {
@@ -42,45 +38,51 @@ class XAxisDrawable implements PlotDrawable {
         mXAxisTextSize = r.getDimension(R.dimen.plot_x_axis_text_size);
         mXAxisTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mXAxisTextPaint.setTextSize(mXAxisTextSize);
-        mXAxisTextPaint.setColor(Color.BLACK);
+        mXAxisTextPaint.setColor(ContextCompat.getColor(context, R.color.day_plot_text_color));
 
         mTextMargin = r.getDimension(R.dimen.plot_x_axis_text_margin_top);
+
+        double sets = ((MAX_ON_SCREEN_DATE_COUNT * Math.pow(2, PlottingEngine.MAX_SCALE_X - 1))
+                    - MAX_ON_SCREEN_DATE_COUNT)
+                / MAX_ON_SCREEN_DATE_COUNT;
+        mMaxCompleteSets = (int) Math.ceil(sets);
     }
 
     @Override
-    public void draw(Canvas canvas) {
-        mEngine.getIndicesForCurrentViewport(mStartEndIndices);
+    public void draw(Canvas canvas, int recommendedStart, int recommendedEnd) {
         canvas.save();
         canvas.translate(-mEngine.getViewport().left, 0);
 
-        int start = Math.max(mStartEndIndices[0] - 1, 0);
-        int end = mStartEndIndices[1];
+        int start = Math.max(recommendedStart - 1, 0);
 
 
-        int maxCompleteSets = (int) Math.ceil(((mBestOnScreen * Math.pow(2, PlottingEngine.MAX_SCALE_X - 1)) - mBestOnScreen) / 6);
-        double rawAdditionalSets = ((mBestOnScreen * Math.pow(2, mEngine.getScaleX() - 1)) - mBestOnScreen) / 6;
-        int additionalCompleteSets = (int) Math.min(Math.ceil(rawAdditionalSets), maxCompleteSets);
+        double rawAdditionalSets = ((MAX_ON_SCREEN_DATE_COUNT * Math.pow(2, mEngine.getScaleX() - 1)) - MAX_ON_SCREEN_DATE_COUNT) / MAX_ON_SCREEN_DATE_COUNT;
+        int additionalCompleteSets = (int) Math.min(Math.ceil(rawAdditionalSets), mMaxCompleteSets);
         float scaleX = mEngine.getScaleX();
-        float distribution = scaleX >= PlottingEngine.MAX_SCALE_X - 1f ? 1f : (float) ((scaleX - Math.floor(scaleX)) / (Math.pow(2, Math.floor(scaleX - 1)) - Math.floor(scaleX - 1)));
+        float distribution;
+        if (scaleX >= PlottingEngine.MAX_SCALE_X - 1f) {
+            distribution = 1f;
+        } else {
+            distribution = (float) ((scaleX - Math.floor(scaleX)) / (Math.pow(2, Math.floor(scaleX - 1)) - Math.floor(scaleX - 1)));
+        }
 
-        int power = (int) Math.ceil(Math.log(mLabels.length / mBestOnScreen) / Math.log(2));
-        float span = (float) (Math.pow(2, power + 1) / Math.pow(2, Math.min(Math.ceil(mEngine.getScaleX()), PlottingEngine.MAX_SCALE_X - 1)));
+        float span = (float) (Math.pow(2, mPower + 1) / Math.pow(2, Math.min(Math.ceil(mEngine.getScaleX()), PlottingEngine.MAX_SCALE_X - 1)));
 
         int bestStart = closestNumber(start, (int) span);
         boolean b = false;
-        for (int i = 0; i < end; i += (span)) {
+        for (int i = 0; i < recommendedEnd; i += (span)) {
 
             if (i < bestStart) {
                 b = !b;
                 continue;
             }
 
-            XLabel label = mLabels[i];
+            XLabel label = mLabels[(int) (i / mMinSpan)];
 
-            float x = label.mX * mEngine.getScaleX();
-            float y = label.mY;
+            float x = label.mPoint.getX() * mEngine.getScaleX();
+            float y = label.mPoint.getY();
 
-            if (b && additionalCompleteSets > 0 && additionalCompleteSets - maxCompleteSets != 0) {
+            if (b && additionalCompleteSets > 0 && additionalCompleteSets - mMaxCompleteSets != 0) {
                 mXAxisTextPaint.setAlpha((int) ((distribution) * 255));
                 b = false;
             } else {
@@ -88,7 +90,7 @@ class XAxisDrawable implements PlotDrawable {
                 b = true;
             }
 
-            canvas.drawText(label.mText, x, y, mXAxisTextPaint);
+            canvas.drawText(label.mPoint.getText(), x, y, mXAxisTextPaint);
         }
 
         canvas.restore();
@@ -110,53 +112,25 @@ class XAxisDrawable implements PlotDrawable {
     }
 
     @Override
-    public void setData(DataSet dataSet) {
-        int dataPointsCount = dataSet.getWidth();
-        float offsetX = mEngine.getValueToPixelX();
-        DateFormat dateFormat = DateTimeUtils.getDataPointAxisDateFormat();
+    public void setData(PlotEngineDataHandler dataHandler) {
+        double max = MAX_ON_SCREEN_DATE_COUNT * Math.pow(2, PlottingEngine.MAX_SCALE_X - 1);
+        mLabels = new XLabel[(int) Math.ceil(max)];
 
+        mPower = (int) Math.ceil(Math.log(dataHandler.getXAxis().getPoints().size() / MAX_ON_SCREEN_DATE_COUNT) / Math.log(2));
+        mMinSpan = (float) (Math.pow(2, mPower + 1) / Math.pow(2, Math.min(Math.ceil(PlottingEngine.MAX_SCALE_X), PlottingEngine.MAX_SCALE_X - 1)));
 
-        for (Column column : dataSet.getColumns()) {
-            if (column.getType() != Column.TYPE_X) continue;
-            List<PlottingEngine.LinePoint> points = new ArrayList<>(dataPointsCount);
-            mLine = new PlottingEngine.XAxis();
-            mLine.points = points;
+        XAxis xAxis = dataHandler.getXAxis();
+        int size = xAxis.getPoints().size();
 
-            for (int i = 0; i < dataPointsCount; i++) {
-                PlotData dataPoint = column.getValues().get(i);
-                PlottingEngine.LinePoint lp = new PlottingEngine.LinePoint();
-                lp.plotData = dataPoint;
-                lp.text = dateFormat.format(new Date(lp.plotData.value.longValue()));
-                lp.x = (int) (i * offsetX);
-                lp.y = (int) (mViewRect.height() + mViewRect.top - mTextMargin);
-                points.add(lp);
-            }
-        }
-
-        mLabels = new XLabel[mLine.points.size()];
-
-        for (int i = 7; i >= 0; i--) {
-            double res = Math.pow(2, i);
-            double onScreenDates = (mLabels.length / res);
-            if (onScreenDates >= MIN_ON_SCREEN_DATE_COUNT
-                    && onScreenDates <= MAX_ON_SCREEN_DATE_COUNT) {
-                mBestOnScreen = (float) Math.ceil(onScreenDates);
-                break;
-            }
-        }
-
-        for (int i = 0; i < mLabels.length; i++) {
-            PlottingEngine.LinePoint linePoint = mLine.points.get(i);
-
-            float x = (linePoint.x);
-            float y = linePoint.y;
-
-            XLabel label = new XLabel();
-            label.mX = x;
-            label.mY = y;
-            label.mAlpha = 255;
-            label.mText = linePoint.text;
-            mLabels[i] = label;
+        int index = 0;
+        for (int i = 0; i < size; i += mMinSpan) {
+            Line.LinePoint point = xAxis.getPoints().get(i);
+            point.setY((int) (mViewRect.height() + mViewRect.top - mTextMargin));
+            XLabel xLabel = new XLabel();
+            xLabel.mAlpha = 255;
+            xLabel.mPoint = point;
+            mLabels[index] = xLabel;
+            index++;
         }
     }
 
@@ -167,18 +141,17 @@ class XAxisDrawable implements PlotDrawable {
         return Math.abs(number - firstPossibleNumber) < Math.abs(divider - secondPossibleNumber) ? firstPossibleNumber : secondPossibleNumber;
     }
 
-    private float measureText(String text) {
-        return mXAxisTextPaint.measureText(text);
+    @Override
+    public void updateTheme(Context context, AppTheme appTheme) {
+        mXAxisTextPaint.setColor(ContextCompat.getColor(context, appTheme.getPlotTextColor()));
     }
 
-    public PlottingEngine.XAxis getLine() {
+    public XAxis getLine() {
         return mLine;
     }
 
-    class XLabel {
-        private String mText;
-        private float mX, mY;
-        private long mValue;
-        private int mAlpha = 0;
+    static class XLabel {
+        Line.LinePoint mPoint;
+        int mAlpha = 0;
     }
 }

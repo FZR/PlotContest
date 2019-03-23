@@ -8,18 +8,15 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.PopupWindow;
-import android.widget.TextView;
 
+import com.josfzr.plotcontest.PopupController;
 import com.josfzr.plotcontest.R;
 import com.josfzr.plotcontest.data.DataSet;
-import com.josfzr.plotcontest.data.PlotData;
 import com.josfzr.plotcontest.plotter.engine.PlottingEngine;
+import com.josfzr.plotcontest.plotter.engine.data.CursorData;
+import com.josfzr.plotcontest.themes.AppTheme;
 
 import androidx.annotation.Nullable;
 
@@ -32,7 +29,8 @@ public class PlotView extends View implements PlottingEngine.Drawer,
 
     private boolean mShowAll, mIsPanning;
 
-    private PopupWindow mPopup;
+    @Nullable
+    private PopupController mPopupController;
 
     public PlotView(Context context) {
         this(context, null, 0);
@@ -63,15 +61,12 @@ public class PlotView extends View implements PlottingEngine.Drawer,
         }
 
         mPlottingEngine = new PlottingEngine(context, this, mShowAll, strokeWidth);
-        LayoutInflater inflater = LayoutInflater.from(context);
-        View v = inflater.inflate(R.layout.popup, null);
-        TextView tv = v.findViewById(R.id.date_text);
-        tv.setText("asdasdasd");
-        mPopup = new PopupWindow(v,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
 
         setLayerType(LAYER_TYPE_HARDWARE, null);
+    }
+
+    public void setPopupController(PopupController controller) {
+        mPopupController = controller;
     }
 
     @Override
@@ -103,17 +98,15 @@ public class PlotView extends View implements PlottingEngine.Drawer,
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        //PlotData[] data = mPlottingEngine.getPlotDataAt(event.getX());
         if (event.getActionMasked() == MotionEvent.ACTION_MOVE
                 || event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            mPlottingEngine.setCursorAt(event.getX());
-            if (mPopup.isShowing()) {
-                mPopup.update(this, (int) event.getX(), -getMeasuredHeight() + 50, -2, -2);
-            } else {
-                mPopup.showAsDropDown(this, (int) event.getX(), -getMeasuredHeight() + 50);
+            if (mPopupController != null) {
+                CursorData cursorData = mPlottingEngine.cursorAt(event.getX());
+                mPopupController.showPopupWithDataAt(this, event.getX(), -getMeasuredHeight() + 50, cursorData);
             }
             return true;
         }
+        mPopupController.hidePopup();
         return false;
     }
 
@@ -129,22 +122,6 @@ public class PlotView extends View implements PlottingEngine.Drawer,
         mIsPanning = false;
     }
 
-    public void setPlotScaleX(float scaleX) {
-        mPlottingEngine.setScaleX(scaleX);
-    }
-
-    public void setPlotScaleY(float scaleY) {
-        mPlottingEngine.setScaleY(scaleY);
-    }
-
-    public float getPlotScaleX() {
-        return mPlottingEngine.getScaleX();
-    }
-
-    public float getPlotScaleY() {
-        return mPlottingEngine.getScaleY();
-    }
-
     @Override
     public void onDrawRequested() {
         invalidate();
@@ -157,14 +134,28 @@ public class PlotView extends View implements PlottingEngine.Drawer,
 
     @Override
     public void updateProjection(RectF projection) {
+        if (mPopupController != null) {
+            mPopupController.hidePopup();
+        }
         mPlottingEngine.updateProjection(projection);
     }
 
     public void onRestoreLine(String id) {
+        if (mPopupController != null) {
+            mPopupController.hidePopup();
+        }
         mPlottingEngine.onRestoreLine(id);
     }
 
     public void onRemoveLine(String id) {
+        if (mPopupController != null) {
+            mPopupController.hidePopup();
+        }
         mPlottingEngine.onRemoveLine(id);
+    }
+
+    public void setAppTheme(AppTheme appTheme) {
+        mPlottingEngine.updateTheme(getContext(), appTheme);
+        invalidate();
     }
 }

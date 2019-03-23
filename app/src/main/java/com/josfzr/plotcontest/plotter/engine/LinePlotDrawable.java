@@ -6,12 +6,13 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
+import android.util.Log;
 
 import com.josfzr.plotcontest.R;
-import com.josfzr.plotcontest.data.Column;
-import com.josfzr.plotcontest.data.DataSet;
-import com.josfzr.plotcontest.data.LineData;
-import com.josfzr.plotcontest.data.PlotData;
+import com.josfzr.plotcontest.plotter.engine.data.Line;
+import com.josfzr.plotcontest.plotter.engine.data.PlotEngineDataHandler;
+import com.josfzr.plotcontest.plotter.engine.data.PlottingLine;
+import com.josfzr.plotcontest.themes.AppTheme;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,13 +28,13 @@ class LinePlotDrawable implements PlotDrawable {
     private Paint mPlotPaint;
 
     private HashMap<String, Path> mPaths;
-    private List<PlottingEngine.Line> mAllLines;
-    private List<PlottingEngine.Line> mCurrentLines;
+    private PlottingLine[] mAllLines;
+    private List<PlottingLine> mCurrentLines;
 
     private int[] mAlphas;
 
-    private DataSet mDataSet;
-    private int[] mStartEndIndices = new int[2];
+    private float mLastScaleX = 1, mLastValueToY = 0;
+    private int mLastStart, mLastEnd;
 
     public LinePlotDrawable(@NonNull Context context,
                             @NonNull PlottingEngine mEngine,
@@ -53,62 +54,76 @@ class LinePlotDrawable implements PlotDrawable {
     }
 
     @Override
-    public void draw(Canvas canvas) {
-        mEngine.getIndicesForCurrentViewport(mStartEndIndices);
+    public void draw(Canvas canvas, int recommendedStart, int recommendedEnd) {
         canvas.save();
-        canvas.translate(-mEngine.getViewport().left, 0);
+        canvas.translate(-mEngine.getViewport().left, mRectToDraw.top + mRectToDraw.height());
+        float valueToY = mEngine.getValueToPixelY(mRectToDraw);
+        //canvas.scale(mEngine.getScaleX(), valueToY);
 
-
-        for (PlottingEngine.Line line : mAllLines) {
-            if (line.alpha == 0) continue;
-            Path p = mPaths.get(line.id);
+        for (PlottingLine line : mAllLines) {
+            if (line.getAlpha() == 0) continue;
+            Path p = mPaths.get(line.getId());
 
             if (p == null) {
                 throw new NullPointerException("Path is NULL");
             }
 
-            for (int i = mStartEndIndices[0]; i < mStartEndIndices[1]; i++) {
-                PlottingEngine.LinePoint point = line.points.get(i);
-                float x = point.x * mEngine.getScaleX();
-                float y = mRectToDraw.top
-                        + mRectToDraw.height()
-                        - (point.y * mEngine.getValueToPixelY());
+            if (mLastStart != recommendedStart
+                    || mLastEnd != recommendedEnd
+                    || mLastValueToY != valueToY
+                    || mLastScaleX != mEngine.getScaleX()) {
 
-                if (i == mStartEndIndices[0]) {
-                    p.reset();
-                    p.moveTo(x, y);
-                } else {
-                    p.lineTo(x, y);
+                for (int i = recommendedStart; i < recommendedEnd; i++) {
+                    Line.LinePoint point = line.getPoints().get(i);
+                    float x = point.getX() * mEngine.getScaleX();
+                    float y = - (point.getY() * valueToY);
+
+                    if (i == recommendedStart) {
+                        p.reset();
+                        p.moveTo(x, y);
+                    } else {
+                        p.lineTo(x, y);
+                    }
                 }
             }
 
-            mPlotPaint.setColor(line.color);
-            mPlotPaint.setAlpha(line.alpha);
+            mPlotPaint.setColor(line.getColor());
+            mPlotPaint.setAlpha(line.getAlpha());
             canvas.drawPath(p, mPlotPaint);
         }
+
+
+        mLastStart = recommendedStart;
+        mLastEnd = recommendedEnd;
+        mLastValueToY = valueToY;
 
         canvas.restore();
     }
 
     @Override
     public boolean animate(float delta) {
-        //if (mCurrentLines.size() == mAllLines.size()) return true;
+        if (delta <= 0) return false;
 
-        int linesSize = mAllLines.size();
         boolean willFinishAnimation = true;
 
-        for (int i = 0; i < linesSize; i++) {
-            boolean isOk = mAllLines.get(i).alpha == mAlphas[i];
+        int index = 0;
+        for (PlottingLine l : mAllLines) {
+            boolean isOk = l.getAlpha() == mAlphas[index];
             willFinishAnimation = willFinishAnimation && isOk;
-            if (isOk) continue;
-            float diff = 255 * delta * .6f;
-            int targetAlpha = mAlphas[i];
+            if (isOk) {
+                index++;
+                continue;
+            }
+            float diff = 255 * delta * .9f;
+            int targetAlpha = mAlphas[index];
+            Log.d("Alphas", "target: " + targetAlpha + " current: " + l.getAlpha() + " diff: " + diff);
             if (targetAlpha == 0) {
-                mAllLines.get(i).alpha = (int) Math.max((mAllLines.get(i).alpha - diff), 0);
+                l.setAlpha((int) Math.max((l.getAlpha() - diff), 0));
             } else {
-                mAllLines.get(i).alpha = (int) Math.min((mAllLines.get(i).alpha + diff), 255);
+                l.setAlpha((int) Math.min((l.getAlpha() + diff), 255));
             }
 
+            index++;
         }
 
         return willFinishAnimation;
@@ -126,44 +141,25 @@ class LinePlotDrawable implements PlotDrawable {
     }
 
     @Override
-    public void setData(DataSet dataSet) {
-        mDataSet = dataSet;
-        int dataPointsCount = mDataSet.getWidth();
-        float offsetX = mEngine.getValueToPixelX();
+    public void setData(PlotEngineDataHandler dataHandler) {
+        PlottingLine[] lines = dataHandler.getPlottingLines();
 
-        mPaths = new HashMap<>(mDataSet.getColumns().length - 1);
-        mAllLines = new ArrayList<>(mDataSet.getColumns().length - 1);
-
-        for (Column column : mDataSet.getColumns()) {
-            if (column.getType() == Column.TYPE_X) continue;
-
-            List<PlottingEngine.LinePoint> points = new ArrayList<>(dataPointsCount);
-            mPaths.put(column.getId(), new Path());
-            PlottingEngine.Line line = new PlottingEngine.Line();
-            line.id = column.getId();
-            line.color = ((LineData) column).getColor();
-            line.points = points;
-            mAllLines.add(line);
-
-            for (int i = 0; i < dataPointsCount; i++) {
-                PlotData dataPoint = column.getValues().get(i);
-                PlottingEngine.LinePoint lp = new PlottingEngine.LinePoint();
-                lp.plotData = dataPoint;
-                lp.x = (int) (i * offsetX);
-                lp.y = (int) (dataPoint.value.longValue());
-                points.add(lp);
-            }
+        mPaths = new HashMap<>(lines.length);
+        mAllLines = lines;
+        for (PlottingLine line : lines) {
+            mPaths.put(line.getId(), new Path());
         }
 
-        mCurrentLines = new ArrayList<>(mAllLines);
-        mAlphas = new int[mAllLines.size()];
+        mCurrentLines = new ArrayList<>();
+        mCurrentLines.addAll(Arrays.asList(mAllLines));
+        mAlphas = new int[mAllLines.length];
         Arrays.fill(mAlphas, 255);
     }
 
     void hideLine(String id) {
-        for (int i = mAllLines.size() - 1; i >= 0; i--) {
-            PlottingEngine.Line l = mAllLines.get(i);
-            if (l.id.equals(id)) {
+        for (int i = 0; i < mAllLines.length; i++) {
+            PlottingLine l = mAllLines[i];
+            if (l.getId().equals(id)) {
                 mCurrentLines.remove(l);
                 mAlphas[i] = 0;
                 break;
@@ -172,21 +168,26 @@ class LinePlotDrawable implements PlotDrawable {
     }
 
     void showLine(String id) {
-        for (int i = 0; i < mAllLines.size(); i++) {
-            PlottingEngine.Line l = mAllLines.get(i);
-            if (l.id.equals(id)) {
-                mCurrentLines.add(Math.min(i, mCurrentLines.size()), l);
+        for (int i = 0; i < mAllLines.length; i++) {
+            PlottingLine l = mAllLines[i];
+            if (l.getId().equals(id)) {
+                mCurrentLines.add(l);
                 mAlphas[i] = 255;
                 break;
             }
         }
     }
 
-    List<PlottingEngine.Line> getCurrentLines() {
+    @Override
+    public void updateTheme(Context context, AppTheme appTheme) {
+
+    }
+
+    List<PlottingLine> getCurrentLines() {
         return mCurrentLines;
     }
 
-    List<PlottingEngine.Line> getAllLines() {
+    PlottingLine[] getAllLines() {
         return mAllLines;
     }
 }

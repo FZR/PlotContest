@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">PlotContest</string>
+    <string name="app_name">TGPlotContest @jos_fzr</string>
+
+    <string name="menu_first">First Graph</string>
+    <string name="menu_second">Second Graph</string>
+    <string name="menu_third">Third Graph</string>
+    <string name="menu_fourth">Fourth Graph</string>
+    <string name="menu_fifth">Fifth Graph</string>
 </resources>

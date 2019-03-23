@@ -8,7 +8,8 @@ import android.graphics.Rect;
 import android.text.TextPaint;
 
 import com.josfzr.plotcontest.R;
-import com.josfzr.plotcontest.data.DataSet;
+import com.josfzr.plotcontest.plotter.engine.data.PlotEngineDataHandler;
+import com.josfzr.plotcontest.themes.AppTheme;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.util.Pools;
 
 class GridDrawable implements PlotDrawable {
     private static final int DEFAULT_LINE_COUNT = 6;
@@ -26,12 +28,14 @@ class GridDrawable implements PlotDrawable {
     private PlottingEngine mEngine;
 
     private Rect mPlotViewSize;
-    private final int mSegmentationLineHeight;
+    private final int mSegmentationLineSize;
 
     private int mTextMarginBottom, mXAxisTextSize;
 
     private SegmentationLine[] mSegmentationLines;
     private List<SegmentationLine> mLinesForAnimation;
+
+    private SegmentsPool mSegmentsPool = new SegmentsPool();
 
     GridDrawable(@NonNull Context context,
                         @NonNull PlottingEngine mEngine) {
@@ -39,11 +43,13 @@ class GridDrawable implements PlotDrawable {
         Resources r = context.getResources();
         this.mEngine = mEngine;
 
-        mSegmentationLineHeight = r.getDimensionPixelSize(R.dimen.segmentation_line_height);
+        mSegmentationLineSize = r.getDimensionPixelSize(R.dimen.segmentation_line_height);
         mTextMarginBottom = r.getDimensionPixelSize(R.dimen.plot_text_bottom_margin);
 
         int segmentationLineColor = ContextCompat.getColor(context, R.color.day_segmentation_line_color);
         mLinesPaint.setColor(segmentationLineColor);
+        mLinesPaint.setStyle(Paint.Style.STROKE);
+        mLinesPaint.setStrokeWidth(mSegmentationLineSize);
 
         int textColor = ContextCompat.getColor(context, R.color.day_plot_text_color);
         mTextPaint.setColor(textColor);
@@ -54,7 +60,7 @@ class GridDrawable implements PlotDrawable {
     }
 
     @Override
-    public void draw(Canvas canvas) {
+    public void draw(Canvas canvas, int recommendedStart, int recommendedEnd) {
         if (mSegmentationLines == null) return;
 
         drawSegmentationLines(canvas);
@@ -62,22 +68,26 @@ class GridDrawable implements PlotDrawable {
 
     @Override
     public boolean animate(float delta) {
-        float diff = 255 * delta * .9f;
+        float diff = 255 * delta * 2f;
         for (int i = mLinesForAnimation.size() - 1; i >= 0; i--) {
             SegmentationLine line = mLinesForAnimation.get(i);
             if (line.mAlpha == 0) {
                 mLinesForAnimation.remove(i);
+                mSegmentsPool.release(line);
                 continue;
             }
 
             line.mAlpha = (int) Math.max(line.mAlpha - diff, 0);
         }
 
+        boolean allAlphasOk = true;
+
         for (SegmentationLine line : mSegmentationLines) {
             line.mAlpha = (int) Math.min(line.mAlpha + diff, 255);
+            allAlphasOk = line.mAlpha == 255 && allAlphasOk;
         }
 
-        return mLinesForAnimation == null || mLinesForAnimation.size() == 0;
+        return (mLinesForAnimation == null || mLinesForAnimation.size() == 0) && allAlphasOk;
     }
 
     @Override
@@ -93,7 +103,7 @@ class GridDrawable implements PlotDrawable {
     }
 
     @Override
-    public void setData(DataSet dataSet) {
+    public void setData(PlotEngineDataHandler dataHandler) {
         mSegmentationLines = new SegmentationLine[DEFAULT_LINE_COUNT];
         addSegments(true, true);
     }
@@ -105,12 +115,10 @@ class GridDrawable implements PlotDrawable {
 
     private void drawSegmentationLines(Canvas canvas) {
         for (SegmentationLine line : mSegmentationLines) {
-            float top = mPlotViewSize.top
+            line.mTop = mPlotViewSize.top
                     + mPlotViewSize.height()
-                    - (line.mValue * mEngine.getValueToPixelY())
-                    - mSegmentationLineHeight;
-            line.mTop = top;
-            line.mBottom = top + mSegmentationLineHeight;
+                    - (line.mValue * mEngine.getValueToPixelY(mPlotViewSize))
+                    - mSegmentationLineSize;
             mTextPaint.setAlpha(line.mAlpha);
             drawSegmentationLine(canvas, line);
             canvas.save();
@@ -133,40 +141,54 @@ class GridDrawable implements PlotDrawable {
 
     private void drawSegmentationLine(Canvas canvas, SegmentationLine line) {
         mLinesPaint.setAlpha(line.mAlpha);
-        canvas.drawLine(
-                0,
+        canvas.drawLine(0,
                 line.mTop,
                 mPlotViewSize.width(),
-                line.mBottom,
-                mLinesPaint
-        );
+                line.mTop,
+                mLinesPaint);
     }
 
     private void addSegments(boolean isOpaque,
                              boolean includeZero) {
-        double max = mEngine.getNiceMax();
-        int segment = (int) (max / (DEFAULT_LINE_COUNT - 1));
+
+        int segment = (int) (mEngine.getNiceMax() / (DEFAULT_LINE_COUNT - 1));
 
         for (int i = includeZero ? 0 : 1; i < mSegmentationLines.length; i++) {
-            SegmentationLine sl = new SegmentationLine();
+            SegmentationLine sl = mSegmentsPool.acquire();
+            if (sl == null) {
+                sl = new SegmentationLine();
+            }
             sl.mText = String.valueOf(segment * (i));
             sl.mValue = segment * i;
-            float top = mPlotViewSize.top
+            sl.mTop = mPlotViewSize.top
                     + mPlotViewSize.height()
-                    - (sl.mValue * mEngine.getValueToPixelY())
-                    - mSegmentationLineHeight;
-            sl.mTop = top;
-            sl.mBottom = top + mSegmentationLineHeight;
+                    - (sl.mValue * mEngine.getValueToPixelY(mPlotViewSize))
+                    - mSegmentationLineSize;
             sl.mAlpha = isOpaque ? 255 : 0;
 
             mSegmentationLines[i] = sl;
         }
     }
 
-    private class SegmentationLine {
-        private String mText;
-        private float mTop, mBottom;
-        private long mValue;
-        private int mAlpha = 0;
+    @Override
+    public void updateTheme(Context context, AppTheme appTheme) {
+        mTextPaint.setColor(ContextCompat.getColor(context, appTheme.getPlotTextColor()));
+        mLinesPaint.setColor(ContextCompat.getColor(context, appTheme.getSegmentLinesColor()));
     }
+
+    private static class SegmentationLine {
+        String mText;
+        float mTop;
+        long mValue;
+        int mAlpha = 0;
+    }
+
+    private static class SegmentsPool extends Pools.SimplePool<SegmentationLine> {
+        private static final int SIZE = 36;
+
+        SegmentsPool() {
+            super(SIZE);
+        }
+    }
+
 }

@@ -20,10 +20,10 @@ public class LineData extends Column {
         mColor = color;
     }
 
-    public void addNumber(@NonNull Number number) {
+    public void addNumber(long number) {
         mValues.add(new PlotData(number));
-        _max = Math.max(number.longValue(), _max);
-        _min = Math.min(number.longValue(), _min);
+        _max = Math.max(number, _max);
+        _min = Math.min(number, _min);
     }
 
     public int getColor() {

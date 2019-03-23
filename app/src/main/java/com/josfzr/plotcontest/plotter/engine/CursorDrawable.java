@@ -7,7 +7,11 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 
 import com.josfzr.plotcontest.R;
-import com.josfzr.plotcontest.data.DataSet;
+import com.josfzr.plotcontest.plotter.engine.data.CursorData;
+import com.josfzr.plotcontest.plotter.engine.data.PlotEngineDataHandler;
+import com.josfzr.plotcontest.themes.AppTheme;
+
+import java.util.Arrays;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -23,11 +27,14 @@ class CursorDrawable implements PlotDrawable {
 
     private PlottingEngine mEngine;
 
-    private PlottingEngine.CursorData mCurrentCursor;
+    private CursorData mCurrentCursor;
 
     private Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private Paint mLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private Rect mViewSize;
+
+    private int[] mAlphas;
 
     public CursorDrawable(@NonNull Context context,
                           @NonNull PlottingEngine plottingEngine) {
@@ -35,37 +42,41 @@ class CursorDrawable implements PlotDrawable {
         Resources r = context.getResources();
 
         mPaint.setStyle(Paint.Style.FILL);
-        mInnerColor = ContextCompat.getColor(context, R.color.white);
-        mCursorColor = ContextCompat.getColor(context, R.color.cursor_color);
+        mInnerColor = ContextCompat.getColor(context, R.color.day_cursor_inner_circle_color);
+        mCursorColor = ContextCompat.getColor(context, R.color.day_cursor_color);
         mDiameter = r.getDimension(R.dimen.cursor_circle_diameter);
         mCursorWidth = r.getDimension(R.dimen.cursor_width);
         mCircleStrokeWidth = r.getDimension(R.dimen.cursor_circle_stroke_width);
         mBottomTextHeight = r.getDimension(R.dimen.plot_x_axis_text_margin_top)
                 + r.getDimension(R.dimen.plot_x_axis_text_size);
+        mLinePaint.setStyle(Paint.Style.STROKE);
+        mLinePaint.setStrokeWidth(mCursorWidth);
     }
 
     @Override
-    public void draw(Canvas canvas) {
+    public void draw(Canvas canvas, int recommendedStart, int recommendedEnd) {
         if (mCurrentCursor == null) return;
 
-        int count = mCurrentCursor.mCursorPoints.length;
+        int count = mCurrentCursor.getCursorPoints().length;
         float outerRadius = mDiameter * .5f;
         float innerRadius = (mDiameter - mCircleStrokeWidth) * .5f;
 
         canvas.save();
         canvas.translate(-mEngine.getViewport().left, 0);
-        float x = mCurrentCursor.x * mEngine.getScaleX();
-        mPaint.setColor(mCursorColor);
-        canvas.drawLine((x) - (mCursorWidth * .5f),
-                0,
-                (x) + (mCursorWidth * .5f),
+        float x = mCurrentCursor.getX() * mEngine.getScaleX();
+        mLinePaint.setColor(mCursorColor);
+        canvas.drawLine(x - (mCursorWidth * .5f),
+                mViewSize.top,
+                x - (mCursorWidth - .5f),
                 mViewSize.bottom,
-                mPaint);
+                mLinePaint);
 
         for (int i = 0; i < count; i++) {
-            PlottingEngine.CursorPoint point = mCurrentCursor.mCursorPoints[i];
-            mPaint.setColor(point.mColor);
-            float y = mViewSize.top + mViewSize.height() - (point.y * mEngine.getValueToPixelY());
+            CursorData.CursorPoint point = mCurrentCursor.getCursorPoints()[i];
+            if (point.getAlpha() == 0) continue;
+            mPaint.setColor(point.getColor());
+            mPaint.setAlpha(point.getAlpha());
+            float y = mViewSize.top + mViewSize.height() - (point.getY() * mEngine.getValueToPixelY(mViewSize));
             canvas.drawCircle(
                     x,
                     y,
@@ -84,7 +95,23 @@ class CursorDrawable implements PlotDrawable {
 
     @Override
     public boolean animate(float delta) {
-        return true;
+        if (mCurrentCursor == null) return true;
+        int count = mCurrentCursor.getCursorPoints().length;
+
+        boolean result = true;
+        float diff = 255 * delta * 2;
+        for (int i = 0; i < count; i++) {
+            CursorData.CursorPoint point = mCurrentCursor.getCursorPoints()[i];
+            result = point.getAlpha() == mAlphas[i] && result;
+
+            if (point.getAlpha() > mAlphas[i]) {
+                point.setAlpha((int) (point.getAlpha() - diff));
+            } else if (point.getAlpha() < mAlphas[i]) {
+                point.setAlpha((int) (point.getAlpha() + diff));
+            }
+        }
+
+        return result;
     }
 
     @Override
@@ -99,15 +126,43 @@ class CursorDrawable implements PlotDrawable {
     }
 
     @Override
-    public void setData(DataSet dataSet) {
-
+    public void setData(PlotEngineDataHandler dataHandler) {
+        int lineCount = dataHandler.getPlottingLines().length;
+        mAlphas = new int[lineCount];
+        Arrays.fill(mAlphas, 255);
     }
 
-    public void setCursor(PlottingEngine.CursorData data) {
+    public void setCursor(CursorData data) {
         mCurrentCursor = data;
     }
 
-    public PlottingEngine.CursorData getCurrentCursor() {
+    public CursorData getCurrentCursor() {
         return mCurrentCursor;
+    }
+
+    public void hideLine(String id) {
+        if (mCurrentCursor == null) return;
+        for (int i = 0; i < mCurrentCursor.getCursorPoints().length; i++) {
+            if (mCurrentCursor.getCursorPoints()[i].getId().equals(id)) {
+                mAlphas[i] = 0;
+                break;
+            }
+        }
+    }
+
+    public void showLine(String id) {
+        if (mCurrentCursor == null) return;
+        for (int i = 0; i < mCurrentCursor.getCursorPoints().length; i++) {
+            if (mCurrentCursor.getCursorPoints()[i].getId().equals(id)) {
+                mAlphas[i] = 255;
+                break;
+            }
+        }
+    }
+
+    @Override
+    public void updateTheme(Context context, AppTheme appTheme) {
+        mCursorColor = ContextCompat.getColor(context, appTheme.getSegmentLinesColor());
+        mInnerColor = ContextCompat.getColor(context, appTheme.getCursorInnerCircleColor());
     }
 }

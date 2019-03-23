@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="segmentation_line_height">1dp</dimen>
+    <dimen name="segmentation_line_height">.2dp</dimen>
     <dimen name="plot_bottom_margin">16dp</dimen>
     <dimen name="plot_text_bottom_margin">8dp</dimen>
     <dimen name="plot_text_size">11sp</dimen>
@@ -12,7 +12,12 @@
     <dimen name="knob_side_handles_width">4dp</dimen>
     <dimen name="knob_top">1dp</dimen>
 
-    <dimen name="cursor_circle_diameter">12.3dp</dimen>
-    <dimen name="cursor_circle_stroke_width">3dp</dimen>
-    <dimen name="cursor_width">2dp</dimen>
+    <dimen name="cursor_circle_diameter">10.3dp</dimen>
+    <dimen name="cursor_circle_stroke_width">5dp</dimen>
+    <dimen name="cursor_width">.5dp</dimen>
+
+    <dimen name="popup_item_margin_start">8dp</dimen>
+
+    <dimen name="checkbox_text_padding">16dp</dimen>
+    <dimen name="checkbox_text_size">15sp</dimen>
 </resources>

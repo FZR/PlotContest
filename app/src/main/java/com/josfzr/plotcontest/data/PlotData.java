@@ -3,9 +3,9 @@ package com.josfzr.plotcontest.data;
 public class PlotData {
     private int x;
     private int y;
-    public final Number value;
+    public final long value;
 
-    public PlotData(Number value) {
+    public PlotData(long value) {
         this.value = value;
     }
 

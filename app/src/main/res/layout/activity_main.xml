@@ -1,34 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/day_global_background"
     tools:context=".MainActivity">
 
-    <com.josfzr.plotcontest.plotter.PlotView
-        android:id="@+id/plot_view"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:paddingTop="55dp"
-        app:strokeWidth="2.2dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:background="@color/colorPrimary"
         android:layout_width="match_parent"
-        android:layout_height="320dp" />
+        android:layout_height="wrap_content">
 
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
-    <com.josfzr.plotcontest.plotter.MiniPlotView
-        android:id="@+id/mini_plot_view"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+            <ImageView
+                android:id="@+id/night_mode_switch"
+                android:src="@drawable/ic_night"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginEnd="16dp"
+                android:tint="@color/white"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/title_text"
+                android:text="@string/app_name"
+                android:textColor="@color/white"
+                android:textSize="17sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+        </FrameLayout>
+
+    </androidx.appcompat.widget.Toolbar>
+
+    <ScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:id="@+id/graphs"
+            android:orientation="vertical"
+            android:background="@color/day_scroll_bg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <com.josfzr.plotcontest.GraphLayoutView
+                android:background="@color/white"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <com.josfzr.plotcontest.GraphLayoutView
+                android:background="@color/white"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <com.josfzr.plotcontest.GraphLayoutView
+                android:background="@color/white"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <com.josfzr.plotcontest.GraphLayoutView
+                android:background="@color/white"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <com.josfzr.plotcontest.GraphLayoutView
+                android:background="@color/white"
+                android:layout_marginTop="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <!--<com.josfzr.plotcontest.GraphLayoutView
+        android:id="@+id/graph_view"
         android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp"
-        app:showAll="true"
-        app:strokeWidth="1.6dp"
         android:layout_width="match_parent"
-        android:layout_height="44dp" />
+        android:layout_height="wrap_content"/>-->
 
 </LinearLayout>
