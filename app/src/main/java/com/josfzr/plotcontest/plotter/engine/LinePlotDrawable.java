@@ -4,12 +4,10 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Rect;
 import android.util.Log;
 
 import com.josfzr.plotcontest.R;
-import com.josfzr.plotcontest.plotter.engine.data.Line;
 import com.josfzr.plotcontest.plotter.engine.data.PlotEngineDataHandler;
 import com.josfzr.plotcontest.plotter.engine.data.PlottingLine;
 import com.josfzr.plotcontest.themes.AppTheme;
@@ -27,7 +25,7 @@ class LinePlotDrawable implements PlotDrawable {
     private float mXAxisTextHeight;
     private Paint mPlotPaint;
 
-    private HashMap<String, Path> mPaths;
+    private HashMap<String, float[]> mSections;
     private PlottingLine[] mAllLines;
     private List<PlottingLine> mCurrentLines;
 
@@ -58,38 +56,30 @@ class LinePlotDrawable implements PlotDrawable {
         canvas.save();
         canvas.translate(-mEngine.getViewport().left, mRectToDraw.top + mRectToDraw.height());
         float valueToY = mEngine.getValueToPixelY(mRectToDraw);
-        //canvas.scale(mEngine.getScaleX(), valueToY);
+
+        if (mEngine.getScaleX() < 2) {
+            mPlotPaint.setStrokeJoin(Paint.Join.MITER);
+            mPlotPaint.setStrokeCap(Paint.Cap.BUTT);
+        } else {
+            mPlotPaint.setStrokeJoin(Paint.Join.ROUND);
+            mPlotPaint.setStrokeCap(Paint.Cap.ROUND);
+        }
 
         for (PlottingLine line : mAllLines) {
             if (line.getAlpha() == 0) continue;
-            Path p = mPaths.get(line.getId());
-
-            if (p == null) {
-                throw new NullPointerException("Path is NULL");
-            }
-
-            if (mLastStart != recommendedStart
-                    || mLastEnd != recommendedEnd
-                    || mLastValueToY != valueToY
-                    || mLastScaleX != mEngine.getScaleX()) {
-
-                for (int i = recommendedStart; i < recommendedEnd; i++) {
-                    Line.LinePoint point = line.getPoints().get(i);
-                    float x = point.getX() * mEngine.getScaleX();
-                    float y = - (point.getY() * valueToY);
-
-                    if (i == recommendedStart) {
-                        p.reset();
-                        p.moveTo(x, y);
-                    } else {
-                        p.lineTo(x, y);
-                    }
-                }
-            }
+            float[] sections = mSections.get(line.getId());
+            float[] points = Arrays.copyOfRange(sections, recommendedStart * 4, (recommendedEnd - 1) * 4);
 
             mPlotPaint.setColor(line.getColor());
             mPlotPaint.setAlpha(line.getAlpha());
-            canvas.drawPath(p, mPlotPaint);
+
+            int pointsLength = points.length;
+
+            for (int i = 0; i < pointsLength; i++) {
+                points[i] = points[i] * (i % 2 == 0 ? mEngine.getScaleX() : -valueToY);
+            }
+
+            canvas.drawLines(points, mPlotPaint);
         }
 
 
@@ -144,10 +134,21 @@ class LinePlotDrawable implements PlotDrawable {
     public void setData(PlotEngineDataHandler dataHandler) {
         PlottingLine[] lines = dataHandler.getPlottingLines();
 
-        mPaths = new HashMap<>(lines.length);
+        mSections = new HashMap<>(lines.length);
         mAllLines = lines;
+
         for (PlottingLine line : lines) {
-            mPaths.put(line.getId(), new Path());
+            float[] sections = new float[(dataHandler.getRawDataSet().getWidth() - 1) * 4];
+
+            int i = 0;
+            for (int j = 0; j < line.getPoints().size() - 1; j++) {
+                sections[i] = line.getPoints().get(j).getX();
+                sections[i + 1] = line.getPoints().get(j).getY();
+                sections[i + 2] = line.getPoints().get(j + 1).getX();
+                sections[i + 3] = line.getPoints().get(j + 1).getY();
+                i+=4;
+            }
+            mSections.put(line.getId(), sections);
         }
 
         mCurrentLines = new ArrayList<>();

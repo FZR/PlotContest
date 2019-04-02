@@ -7,8 +7,6 @@
 
     <com.josfzr.plotcontest.plotter.PlotView
         android:id="@+id/plot_view"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:paddingTop="55dp"
         app:strokeWidth="2.2dp"
         android:layout_marginStart="16dp"
